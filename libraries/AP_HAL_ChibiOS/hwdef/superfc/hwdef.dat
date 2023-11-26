@@ -46,7 +46,7 @@ OSCILLATOR_HZ 8000000
 # timers 2, 3, 4, 5 and 21. See hal_st_lld.c in ChibiOS for details.
 
 # ChibiOS system timer
-STM32_ST_USE_TIMER 5
+define STM32_ST_USE_TIMER 5
 
 # Now the size of flash in kilobytes, for creating the ld.script.
 
@@ -85,7 +85,7 @@ USB_STRING_MANUFACTURER "ArduPilot"
 # drivers expect.
 
 # order of I2C buses
-I2C_ORDER I2C2 I2C1
+I2C_ORDER I2C1
 
 # Now the serial ordering. These map to the SERIALn_ parameter numbers
 # If you use a shorter list then HAL_Empty::UARTDriver
@@ -139,6 +139,20 @@ SERIAL_ORDER OTG1 USART1 USART2 USART3 UART4 UART5
 # using the SCALE(x) modifier. See the examples below for more
 # modifiers, or read the python code in chibios_hwdef.py.
 
+# LEDs
+PC14 LED_BLUE OUTPUT LOW GPIO(0)
+PC15 LED_GREEN OUTPUT LOW GPIO(1)
+
+define HAL_GPIO_A_LED_PIN 0
+define HAL_GPIO_B_LED_PIN 1
+
+# buzzer
+PB0 BUZZER OUTPUT GPIO(80) LOW
+define HAL_BUZZER_PIN 80
+
+# OSD pad for TTL based OSD control, not supported by AP
+PA4 CAM_C OUTPUT LOW GPIO(83)        # labelled as "CC"
+
 # Now we define the pins that USB is connected on (SERIAL0).
 PA11 OTG_FS_DM OTG1
 PA12 OTG_FS_DP OTG1
@@ -154,16 +168,16 @@ PA10 USART1_RX USART1
 PA3 USART2_RX USART2
 
 # USART3 (SERIAL3)
-PС10 USART3_TX USART3
-PС11 USART3_RX USART3
+PC10 USART3_TX USART3 NODMA
+PC11 USART3_RX USART3 NODMA
 
 # UART4 (SERIAL4)
-PA0 UART4_TX USART4
-PA1 UART4_RX USART4
+PA0 UART4_TX UART4 NODMA
+PA1 UART4_RX UART4 NODMA
 
 # UART5 (SERIAL5)
-PC12 UART5_TX USART5
-PD2 UART5_RX USART5
+PC12 UART5_TX UART5 NODMA
+PD2 UART5_RX UART5 NODMA
 
 # Now define the primary battery connectors. The labels we choose here
 # are used to create defines for pins in the various drivers, so
@@ -175,14 +189,6 @@ PD2 UART5_RX USART5
 
 PC2 BATT_VOLTAGE_SENS ADC1 SCALE(1)
 PC1 BATT_CURRENT_SENS ADC1 SCALE(1)
-
-# Now the first SPI bus. At minimum you need SCK, MISO and MOSI pin
-definitions. You can add speed modifiers if you want them, otherwise
-the defaults for the peripheral class are used.
-
-PA5 SPI1_SCK SPI1
-PA6 SPI1_MISO SPI1
-PA7 SPI1_MOSI SPI1
 
 # This is the pin that senses USB being connected. It is an input pin
 # setup as OPENDRAIN.
@@ -210,175 +216,70 @@ PA7 SPI1_MOSI SPI1
 #PC4 TODO: need to add EXT INT
 PB11 BMI270_CS CS
 
-# one IMU
-IMU BMI270 SPI:bmi270 ROTATION_ROLL_180
-
-# the 2nd SPI bus
+# the 2nd SPI bus for OSD MAX7456
 PB13 SPI2_SCK SPI2
 PB14 SPI2_MISO SPI2
 PB15 SPI2_MOSI SPI2
+PB10 MAX7456_CS CS
 
-# This input pin is used to detect that power is valid on USB.
-PC0 VBUS_nVALID INPUT PULLUP
-
-# This defines the CS pin for the magnetometer and first IMU. Note
-# that CS pins are software controlled, and are not tied to a particular
-# SPI bus.
-PC1 MAG_CS CS
-PC2 MPU_CS CS
-
-# This defines more ADC inputs.
-PC3 AUX_POWER ADC1 SCALE(1)
-PC4 AUX_ADC2 ADC1 SCALE(1)
-
-# And the analog input for airspeed (rarely used these days).
-PC5 PRESSURE_SENS ADC1 SCALE(2)
-
-# Now setup the pins for the microSD card, if available.
-PC8 SDIO_D0 SDIO
-PC9 SDIO_D1 SDIO
-PC10 SDIO_D2 SDIO
-PC11 SDIO_D3 SDIO
-PC12 SDIO_CK SDIO
-PD2 SDIO_CMD SDIO
-
-# More CS pins for more sensors. The labels for all CS pins need to
-# match the SPI device table later in this file.
-PC13 GYRO_EXT_CS CS
-PC14 BARO_EXT_CS CS
-PC15 ACCEL_EXT_CS CS
-PD7 BARO_CS CS
-PE4 MPU_EXT_CS CS
-
-# the first CAN bus
-PD0 CAN1_RX CAN1
-PD1 CAN1_TX CAN1
-
-# The CS pin for FRAM (ramtron). This one is marked as using
-# SPEED_VERYLOW, which matches the HAL_PX4 setup.
-PD10 FRAM_CS CS SPEED_VERYLOW
+# the 3rd SPI bus for Flash SDCARD
+PB3 SPI3_SCK SPI3
+PB4 SPI3_MISO SPI3
+PB5 SPI3_MOSI SPI3
+PC0 SDCARD_CS CS
 
 # Now we start defining some PWM pins. We also map these pins to GPIO
 # values, so users can set BRD_PWM_COUNT to choose how many of the PWM
 # outputs on the primary MCU are setup as PWM and how many as
 # GPIOs. To match HAL_PX4 we number the GPIOs for the PWM outputs
 # starting at 50.
-PE14 TIM1_CH4 TIM1 PWM(1) GPIO(50)
-PE13 TIM1_CH3 TIM1 PWM(2) GPIO(51)
-PE11 TIM1_CH2 TIM1 PWM(3) GPIO(52)
-PE9  TIM1_CH1 TIM1 PWM(4) GPIO(53)
-PD13 TIM4_CH2 TIM4 PWM(5) GPIO(54)
-PD14 TIM4_CH3 TIM4 PWM(6) GPIO(55)
+PC6 TIM3_CH1 TIM3 PWM(1) GPIO(50)
+PC7 TIM3_CH2 TIM3 PWM(2) GPIO(51)
+PC8 TIM3_CH3 TIM3 PWM(3) GPIO(52)
+PC9 TIM3_CH4 TIM3 PWM(4) GPIO(53)
+PA15 TIM2_CH1 TIM2 PWM(5) GPIO(54)
+PA8 TIM1_CH1 TIM1 PWM(6) GPIO(55)
 
-# This is the invensense data-ready pin. We don't use it in the
-# default driver.
-PD15 MPU_DRDY INPUT
+define HAL_STORAGE_SIZE 15360
+STORAGE_FLASH_PAGE 1
 
-# Now setup SPI bus4.
-PE2 SPI4_SCK  SPI4
-PE5 SPI4_MISO SPI4
-PE6 SPI4_MOSI SPI4
+# reserve 16k for bootloader and 32k for flash storage
+FLASH_RESERVE_START_KB 48
 
-# This is the pin to enable the sensors rail. It can be used to power
-# cycle sensors to recover them in case there are problems with power on
-# timing affecting sensor stability. We pull it high by default.
-PE3 VDD_3V3_SENSORS_EN OUTPUT HIGH
+# one IMU
+IMU BMI270 SPI:bmi270 ROTATION_ROLL_180
 
-# Define a LED, mapping it to GPIO(0). LOW will illuminate the LED
-PE12 FMU_LED_AMBER OUTPUT HIGH OPENDRAIN GPIO(0)
+# built-in barometer
+BARO SPL06  I2C:0:0x76
+define AP_BARO_BACKEND_DEFAULT_ENABLED 0
+define AP_BARO_SPL06_ENABLED 1
 
-# Power flag pins: these tell the MCU the status of the various power
-# supplies that are available. The pin names need to exactly match the
-# names used in AnalogIn.cpp.
-PB5 VDD_BRICK_nVALID INPUT PULLUP
-PB7 VDD_BRICK2_nVALID INPUT PULLUP
-PE10 VDD_5V_HIPOWER_nOC INPUT PULLUP
-PE15 VDD_5V_PERIPH_nOC INPUT PULLUP
+# no built-in compass, but probe the i2c bus for all possible
+# external compass types
+define ALLOW_ARM_NO_COMPASS
+define HAL_PROBE_EXTERNAL_I2C_COMPASSES
+define HAL_I2C_INTERNAL_MASK 0
 
-# Now the SPI device table. This table creates all accessible SPI
-# devices, giving the name of the device (which is used by device
-# drivers to open the device), plus which SPI bus it it on, what
-# device ID will be used (which controls the IDs used in parameters
-# such as COMPASS_DEV_ID, so we can detect when the list of devices
-# changes between reboots for calibration purposes), the SPI mode to
-# use, and the low and high speed settings for the device.
-
-# You can define more SPI devices than you actually have, to allow for
-# flexibility in board setup, and the driver code can probe to see
-# which are responding.
-
-# The DEVID values and device names are chosen to match the PX4 port
-# of ArduPilot so users don't need to re-do their accel and compass
-# calibrations when moving to ChibiOS.
+# Motor order implies Betaflight/X for standard ESCs
+define HAL_FRAME_TYPE_DEFAULT 12
 
 # SPI devices
 SPIDEV bmi270    SPI1 DEVID1 BMI270_CS MODE3 1*MHZ 8*MHZ
 SPIDEV osd       SPI2 DEVID1 MAX7456_CS MODE0 10*MHZ 10*MHZ
 SPIDEV sdcard    SPI2 DEVID2 SDCARD_CS  MODE0 400*KHZ 25*MHZ
 
-# Now some commented out SPI device names which can be used by
-# developers to test that the clock calculations are right for a
-# bus. This is used in conjunction with the mavproxy devop module.
-
-# for SPI clock testing
-#SPIDEV clock500 SPI4 DEVID5  MPU_EXT_CS   MODE0  500*KHZ 500*KHZ # gives 329KHz
-#SPIDEV clock1   SPI4 DEVID5  MPU_EXT_CS   MODE0  1*MHZ 1*MHZ     # gives 657kHz
-#SPIDEV clock2   SPI4 DEVID5  MPU_EXT_CS   MODE0  2*MHZ 2*MHZ     # gives 1.3MHz
-#SPIDEV clock4   SPI4 DEVID5  MPU_EXT_CS   MODE0  4*MHZ 4*MHZ     # gives 2.6MHz
-#SPIDEV clock8   SPI4 DEVID5  MPU_EXT_CS   MODE0  8*MHZ 8*MHZ     # gives 5.5MHz
-#SPIDEV clock16  SPI4 DEVID5  MPU_EXT_CS   MODE0  16*MHZ 16*MHZ   # gives 10.6MHz
-
-# This adds a C define which sets up the ArduPilot architecture
-# define. Any line starting with 'define' is copied literally as
-# a #define in the hwdef.h header.
-define HAL_CHIBIOS_ARCH_FMUV3 1
-
-# We need to tell HAL_ChibiOS/Storage.cpp how much storage is
-# available (in bytes).
-define HAL_STORAGE_SIZE 16384
-
-# allow to have have a dedicated safety switch pin
-define HAL_HAVE_SAFETY_SWITCH 1
-
-# This enables the use of a ramtron device for storage, if one is
-# found on SPI. You must have a ramtron entry in the SPI device table.
-
-# Enable RAMTROM parameter storage.
-define HAL_WITH_RAMTRON 1
-
-# Setup for the possibility of an IMU heater since the pixhawk2 cube has
-# an IMU heater.
-define HAL_HAVE_IMU_HEATER 1
-
-# Enable FAT filesystem support (needs a microSD defined via SDIO).
+# filesystem setup on sdcard
 define HAL_OS_FATFS_IO 1
 
-# Now setup the default battery pins driver analog pins and default
-# scaling for the power brick.
-define HAL_BATT_VOLT_PIN 2
-define HAL_BATT_CURR_PIN 3
-define HAL_BATT_VOLT_SCALE 10.1
-define HAL_BATT_CURR_SCALE 17.0
+# setup for OSD
+define OSD_ENABLED 1
+define HAL_OSD_TYPE_DEFAULT 1
+ROMFS_WILDCARD libraries/AP_OSD/fonts/font*.bin
 
-# This defines the default maximum clock on I2C devices.
-define HAL_I2C_MAX_CLOCK 100000
+# minimal drivers to reduce flash usage
+include ../include/minimize_fpv_osd.inc
+include ../include/no_bootloader_DFU.inc
+undef AP_BATTERY_SYNTHETIC_CURRENT_ENABLED
+define AP_BATTERY_SYNTHETIC_CURRENT_ENABLED 0
 
-# We can't share the IO UART (USART6).
-DMA_NOSHARE USART6_TX ADC1
-DMA_PRIORITY USART6* SPI*
-
-# List of files to put in ROMFS. For fmuv3 we need an IO firmware so
-# we can automatically update the IOMCU firmware on boot. The format
-# is "ROMFS ROMFS-filename source-filename". Paths are relative to the
-# ardupilot root.
-ROMFS io_firmware.bin Tools/IO_Firmware/iofirmware_lowpolh.bin
-
-# for users running fmuv3 on their Solo:
-define AP_NOTIFY_OREOLED_ENABLED (BOARD_FLASH_SIZE > 1024)
-define HAL_SOLO_GIMBAL_ENABLED (HAL_MOUNT_ENABLED && BOARD_FLASH_SIZE > 1024)
-
-undef AP_BATTERY_SMBUS_SOLO_ENABLED
-define AP_BATTERY_SMBUS_SOLO_ENABLED (AP_BATTERY_SMBUS_ENABLED && BOARD_FLASH_SIZE > 1024)
-
-# produce this error if we are on a 1M board
-define BOARD_CHECK_F427_USE_1M "ERROR: 1M flash use fmuv2"
+define DEFAULT_NTF_LED_TYPES 257
